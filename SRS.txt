@@ -1,0 +1,275 @@
+Perfect — I’ll give you a **complete, professional, ready-to-implement design** for your **Python + SQLite asset management system**, including:
+
+* All tables with fields
+* Relationships
+* GUI layout / screen flow
+* Handling of disposal, partial disposal, and history
+
+This will fully replace the “Access-style” design and be **serverless, audit-friendly, and single-office ready**.
+
+---
+
+# **1️⃣ Database Tables and Attributes**
+
+### **1. Categories Table**
+
+**Table Name:** `categories`
+
+| Field         | Type                              | Notes           |
+| ------------- | --------------------------------- | --------------- |
+| category_id   | INTEGER PRIMARY KEY AUTOINCREMENT | Unique ID       |
+| category_name | TEXT NOT NULL                     | e.g., Furniture |
+| remarks       | TEXT                              | Optional        |
+
+---
+
+### **2. Sub-Categories Table**
+
+**Table Name:** `sub_categories`
+
+| Field            | Type                              | Notes                       |
+| ---------------- | --------------------------------- | --------------------------- |
+| subcategory_id   | INTEGER PRIMARY KEY AUTOINCREMENT | Unique ID                   |
+| category_id      | INTEGER NOT NULL                  | FK → categories.category_id |
+| subcategory_name | TEXT NOT NULL                     | e.g., Chairs                |
+| remarks          | TEXT                              | Optional                    |
+
+**Relationship:** Many subcategories → One category
+
+---
+
+### **3. Branches Table**
+
+**Table Name:** `branches`
+
+| Field       | Type                              | Notes             |
+| ----------- | --------------------------------- | ----------------- |
+| branch_id   | INTEGER PRIMARY KEY AUTOINCREMENT | Unique ID         |
+| branch_name | TEXT NOT NULL                     | e.g., Main Office |
+| address     | TEXT                              | Optional          |
+| remarks     | TEXT                              | Optional          |
+
+**Usage:** All assets are assigned to a branch, not employees.
+
+---
+
+### **4. Items Table (Master Data)**
+
+**Table Name:** `items`
+
+| Field              | Type                              | Notes                          |
+| ------------------ | --------------------------------- | ------------------------------ |
+| item_id            | INTEGER PRIMARY KEY AUTOINCREMENT | Unique ID                      |
+| item_name          | TEXT NOT NULL                     | e.g., Wooden Chair             |
+| category_id        | INTEGER NOT NULL                  | FK → categories                |
+| subcategory_id     | INTEGER NOT NULL                  | FK → sub_categories            |
+| specification      | TEXT                              | e.g., Wooden, cushioned        |
+| unit               | TEXT                              | e.g., Piece, Set               |
+| govt_property_code | TEXT                              | Optional, unique if applicable |
+| remarks            | TEXT                              | Optional                       |
+
+**Relationship:** Many items → One subcategory → One category
+
+---
+
+### **5. Asset Batches / Acquisition Table**
+
+**Table Name:** `asset_batches`
+
+| Field              | Type                              | Notes                         |
+| ------------------ | --------------------------------- | ----------------------------- |
+| batch_id           | INTEGER PRIMARY KEY AUTOINCREMENT | Unique batch                  |
+| item_id            | INTEGER NOT NULL                  | FK → items.item_id            |
+| branch_id          | INTEGER NOT NULL                  | FK → branches.branch_id       |
+| acquisition_date   | DATE NOT NULL                     |                               |
+| acquisition_method | TEXT NOT NULL                     | Purchase / Transfer / Receipt |
+| source             | TEXT                              | Supplier or office source     |
+| quantity           | INTEGER NOT NULL                  | Total received in this batch  |
+| cost               | REAL                              | Optional                      |
+| authority_ref      | TEXT                              | Approval / voucher number     |
+| remarks            | TEXT                              | Optional                      |
+
+**Notes:**
+
+* Each acquisition creates a “batch” record
+* Quantity in batch can be partially disposed or issued
+
+---
+
+### **6. Asset Transactions Table**
+
+**Table Name:** `asset_transactions`
+
+| Field            | Type                              | Notes                           |
+| ---------------- | --------------------------------- | ------------------------------- |
+| transaction_id   | INTEGER PRIMARY KEY AUTOINCREMENT | Unique ID                       |
+| batch_id         | INTEGER NOT NULL                  | FK → asset_batches              |
+| transaction_type | TEXT NOT NULL                     | Issue / Transfer / Return       |
+| from_branch_id   | INTEGER                           | Optional for transfers/issues   |
+| to_branch_id     | INTEGER                           | Optional for transfers/receipts |
+| transaction_date | DATE NOT NULL                     |                                 |
+| quantity         | INTEGER NOT NULL                  | Quantity moved                  |
+| authority_ref    | TEXT                              | Approval number                 |
+| remarks          | TEXT                              | Optional                        |
+
+**Usage:**
+
+* Track all movement of assets between branches
+* Partial quantities allowed
+* Read-only historical record
+
+---
+
+### **7. Disposal Table**
+
+**Table Name:** `asset_disposal`
+
+| Field           | Type                              | Notes                    |
+| --------------- | --------------------------------- | ------------------------ |
+| disposal_id     | INTEGER PRIMARY KEY AUTOINCREMENT | Unique ID                |
+| batch_id        | INTEGER NOT NULL                  | FK → asset_batches       |
+| disposal_date   | DATE NOT NULL                     |                          |
+| quantity        | INTEGER NOT NULL                  | Partial or full disposal |
+| disposal_method | TEXT NOT NULL                     | e.g., Auction, Write-off |
+| authority_ref   | TEXT                              | Approval / reference     |
+| remarks         | TEXT                              | Optional                 |
+
+**Notes:**
+
+* Tracks partial and full disposal
+* Never deletes records; balance is calculated dynamically
+
+---
+
+### **8. Optional: Users Table (For roles and login)**
+
+**Table Name:** `users`
+
+| Field         | Type                              | Notes                               |
+| ------------- | --------------------------------- | ----------------------------------- |
+| user_id       | INTEGER PRIMARY KEY AUTOINCREMENT |                                     |
+| username      | TEXT UNIQUE                       |                                     |
+| password_hash | TEXT                              |                                     |
+| role          | TEXT                              | Administrator / Data Entry / Viewer |
+
+---
+
+# **2️⃣ Relationships Overview**
+
+* `categories (1) → sub_categories (many)`
+* `sub_categories (1) → items (many)`
+* `items (1) → asset_batches (many)`
+* `asset_batches (1) → asset_transactions (many)`
+* `asset_batches (1) → asset_disposal (many)`
+* `branches (1) → asset_batches (many)`
+* `branches (1) → asset_transactions.from_branch_id / to_branch_id`
+
+**Balance Calculation:**
+
+```
+Current Stock = SUM(batch quantity) 
+                - SUM(transactions quantity issued/transferred out) 
+                - SUM(disposed quantity) 
+                + SUM(transactions returned in)
+```
+
+---
+
+# **3️⃣ GUI / Screen Layouts**
+
+### **A. Master Data Screens**
+
+1. **Categories & Sub-categories**
+
+   * Add / Edit / Delete
+   * Dropdown for Sub-category linked to selected Category
+
+2. **Branches**
+
+   * Add / Edit branch
+   * Branch selection for all forms
+
+3. **Items**
+
+   * Select Category → Sub-category
+   * Enter specifications, unit, property code
+
+---
+
+### **B. Transactions / Asset Movement Screens**
+
+1. **Acquisition / Batch Entry**
+
+   * Select Item, Branch
+   * Enter quantity, date, method, source, authority
+
+2. **Issue / Transfer**
+
+   * Select Item → Show available batches
+   * Enter From Branch → To Branch
+   * Enter quantity, date, authority
+
+3. **Disposal**
+
+   * Select Item → Show available batches
+   * Enter quantity to dispose
+   * Enter disposal method, date, authority
+
+4. **Partial Disposal**
+
+   * GUI shows “Available quantity” per batch
+   * User can select quantity to dispose
+
+---
+
+### **C. Reports / Queries Screens**
+
+* Stock Register (Item-wise)
+* Branch-wise balance
+* Disposal report
+* Partial disposal report
+* Category / Sub-category reports
+* Acquisition history
+* Physical verification report
+
+---
+
+### **D. General GUI Features**
+
+* **Dropdowns for Category → Sub-category → Item**
+* **Date pickers** for all date fields
+* **Read-only grids** for historical transactions
+* **Validation**:
+
+  * Cannot dispose or transfer more than available stock
+  * Cannot delete historical records
+* **Export options**:
+
+  * PDF, Excel for sharing reports
+* **User roles**:
+
+  * Admin can manage master data
+  * Data Entry for all transactions
+  * Viewer for reports only
+
+---
+
+### ✅ **Summary**
+
+* **Tables**: 7–8 core tables (categories, subcategories, branches, items, asset_batches, asset_transactions, asset_disposal, optional users)
+* **Relationships**: Proper relational keys and foreign constraints, all transaction-based
+* **GUI**: Structured by Master Data → Transactions → Disposal → Reports, with validation and audit controls
+* **Audit-friendly**: All history preserved, partial disposals supported, current stock calculated dynamically
+
+---
+
+If you want, I can **now draw a full diagram** showing:
+
+* Tables
+* Relationships
+* GUI screen flow
+* How disposal, partial disposal, and stock balance calculation work
+
+This will give you a **ready-to-develop blueprint**.
+
+Do you want me to make that diagram next?

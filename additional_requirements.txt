@@ -1,0 +1,57 @@
+Additional Requirements and Strategies for Assets and Inventory Management System (AIMS)
+
+This document summarizes the additional features and modifications requested beyond the initial SRS implementation, along with the strategies used to implement them.
+
+1. **Subcategory Parent Category Selection Issue**
+   - **Requirement**: Subcategories dialog was not allowing selection of parent category properly (using popups).
+   - **Strategy**: Replaced QInputDialog popups with a proper SubCategoryEditDialog using QFormLayout, including a QComboBox for category selection that updates subcategories dynamically.
+
+2. **Remove Popups for Master Data Entry**
+   - **Requirement**: Replace popup dialogs for categories, branches, and items with proper form dialogs.
+   - **Strategy**: Created CategoryEditDialog, BranchEditDialog, and ensured ItemEditDialog was used. Added validation to prevent saving without required fields (e.g., category/subcategory for items).
+
+3. **Display Stock Register on Main Dashboard**
+   - **Requirement**: Show the stock register on the main page instead of a welcome message.
+   - **Strategy**: Modified MainWindow.set_central_widget() to include a QTableWidget displaying item-wise stock balances, with automatic refresh after transactions.
+
+4. **Fix Number Calculations (Transfers Not Updating Balances)**
+   - **Requirement**: Transfers were not updating stock numbers correctly in branch-wise reports.
+   - **Strategy**: Modified gui_issue_transfer.py to create new asset batches in receiving branches for transfers/returns, ensuring stock appears in the correct branch. Updated stock register query to calculate balances per batch accurately.
+
+5. **Default "Store" Branch**
+   - **Requirement**: Create a "Store" branch by default for central acquisitions and disposals.
+   - **Strategy**: Added ensure_store_branch() in MainWindow.__init__() to insert "Store" if not exists. Set acquisitions and disposals to default to "Store" branch.
+
+6. **Detailed Stock Register with Category/Subcategory/Branch**
+   - **Requirement**: Stock register should show category, subcategory, item, branch, and balance.
+   - **Strategy**: Updated load_stock_register() query to group by these fields, using subqueries for accurate balance calculation per batch.
+
+7. **Acquisition Year Field**
+   - **Requirement**: Add acquisition year field for batches, replace batch display with acquisition year, and include in stock register.
+   - **Strategy**: Added acquisition_year column to asset_batches table. Updated acquisition dialog to include the field. Modified batch selection displays to show acquisition year. Added "Acquisition Year" column to stock register table.
+
+8. **Item Management Validation**
+   - **Requirement**: Fix issues with adding/deleting items (e.g., no category/subcategory selected).
+   - **Strategy**: Added checks in gui_items.py add/edit methods to ensure category and subcategory are selected before saving. Deletion checks for existing batches.
+
+9. **Rename Reports Menu Item**
+   - **Requirement**: Change "Stock Register" to "Summary" in Reports menu.
+   - **Strategy**: Updated menu creation in gui.py.
+
+10. **Bulk Disposal (Condemnation)**
+    - **Requirement**: Disposal should show all Store items with textboxes for quantities to dispose, per batch.
+    - **Strategy**: Redesigned DisposalDialog with a QTableWidget showing batches in Store, with QLineEdit for disposal quantities. Added "Dispose Selected" button to process multiple disposals at once, validating quantities.
+
+11. **Refresh Button on Dashboard**
+    - **Requirement**: Add a refresh button to manually update the stock summary.
+    - **Strategy**: Added a QPushButton in the header layout of set_central_widget(), connected to load_stock_register().
+
+Overall Strategies:
+- Used PySide6 for GUI, SQLite for database.
+- Ensured data integrity with foreign keys and validation.
+- Balanced automatic updates (after transactions) with manual refresh option.
+- Focused on user-friendly interfaces with tables and forms instead of popups.
+- Maintained audit-friendly design with all transactions recorded.
+
+This covers all additional requests implemented to enhance the AIMS application.</content>
+<parameter name="filePath">d:\AIMS\additional_requirements.txt
